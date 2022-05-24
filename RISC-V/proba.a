@@ -1,0 +1,49 @@
+#a0 adresa 0x6000
+#a1 adresa 0x8000
+#a3 adresa 0x9000
+#a4 borjac
+
+ lui a0, %hi(0x6000)
+ addi a0, a0, %lo(0x6000)
+ lui a1, %hi(0x8000)
+ addi a1, a1, %lo(0x8000)
+ lui a3, %hi(0x9000)
+ addi a3, a3, %lo(0x9000)
+ 
+ addi a4,x0,5
+
+LOOP
+ addi a4, a4, -1
+ lw t1, 0(a0)
+ lw t2, 0(a1)
+ 
+ bge t1, t2, PRVI
+ blt t1, t2, DRUGI
+NAZAD
+ addi a0, a0, 4
+ addi a1, a1, 4
+ bne a4, x0, LOOP
+
+ halt
+
+
+PRVI
+ sw t1, 0(a3)
+ addi a3, a3, 4
+ jal x0, NAZAD
+
+DRUGI
+ sw t2, 0(a3)
+ addi a3, a3, 4
+ jal x0, NAZAD
+ 
+ 
+
+ org 0x6000
+ dw 1,2,3,1,2
+
+ org 0x8000
+ dw 0,1,2,4,5     
+ org 0x9000
+ dw 0,0,0,0,0
+ 

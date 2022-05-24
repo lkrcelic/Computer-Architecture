@@ -1,0 +1,167 @@
+ lw a0, 0x500(x0) #arapski zapis broja
+ lw s0, 0x600(x0) #adresa gpio-a
+ lui sp, %hi(0x1000) #stack pointer na 1000
+ addi sp, sp, %lo(0x1000)
+
+ #spremi konstante
+ addi s1, x0, 100
+ addi s2, x0, 90
+ addi s3, x0, 50
+ addi s4, x0, 40
+ addi s5, x0, 10
+ addi s6, x0, 9
+ addi s7, x0, 5
+ addi s8, x0, 4
+ addi s9, x0, 1
+
+ jal ra, PRETVORI #skok u funkciju
+ 
+ halt
+
+#a1 testni registar
+#a2 asci zapis slova
+PRETVORI
+ addi sp, sp, -4  #spremanje 
+ sw a1, 0(sp)     #konteksta
+ addi sp, sp, -4  #na
+ sw  a2, 0(sp)    #stog
+ addi sp, sp, -4  #spremi ra jer cemo 
+ sw ra, 0(sp)     #pozivati drugu funk
+ 
+ addi a2, x0, 0x0D #obrisi ulazne registre lcd-a
+ jal ra, LCDWR
+
+LOOP
+#100
+ add a1, x0, s1
+ bgeu a0, a1, W_100
+#90
+ add a1, x0, s2
+ bgeu a0, a1, W_90
+#50
+ add a1, x0, s3
+ bgeu a0, a1, W_50
+#40
+ add a1, x0, s4
+ bgeu a0, a1, W_40
+#10
+ add a1, x0, s5
+ bgeu a0, a1, W_10
+#9
+ add a1, x0, s6
+ bgeu a0, a1, W_9
+#5
+ add a1, x0, s7
+ bgeu a0, a1, W_5
+#4
+ add a1, x0, s8
+ bgeu a0, a1, W_4
+#1
+ add a1, x0, s9
+ bgeu a0, a1, W_1
+ 
+ addi a2, x0, 0X0A #upisi rezultat na zaslon
+ jal ra, LCDWR
+ addi a2, x0, 0x0D #obrisi ulazne registre lcd-a
+ jal ra, LCDWR
+
+#obnavljanje konteksta
+ lw ra, 0(sp)
+ addi sp, sp, 4
+ lw a2, 0(sp)   
+ addi sp, sp, 4
+ lw a1, 0(sp)
+ addi sp, sp, 4
+
+ 
+ jalr x0, 0(ra)   #povratak u glavni program
+
+
+
+LCDWR
+ andi a2,a2,0x7F   #osiguraj da je na na kraju 0
+ sb a2, 4(s0)      #upisi u pripremni dio
+ ori a2,a2,0x80    #dodaj jedan na kraj
+ sb a2, 4(s0)      #podigni bit takta
+ andi a2, a2,0x7F  #spusti takt
+ sb a2, 4(s0)
+ addi a2, x0, 0X0A
+ sb a2, 4(s0)      #ispisi na zaslon
+ jalr x0, 0(ra)    #povratak
+
+
+W_100
+ sub a0,a0,a1      #oduzmi konstantu od a0
+ addi a2, x0, 0x43
+ jal ra, LCDWR
+ jal x0, LOOP
+
+W_90 
+ sub a0,a0,a1      #oduzmi konstantu od a0
+ addi a2, x0, 0x58
+ jal ra, LCDWR
+ addi a2, x0, 0x43
+ jal ra, LCDWR
+ jal x0, LOOP
+
+W_50
+ sub a0,a0,a1      #oduzmi konstantu od a0
+ addi a2, x0, 0x4C
+ jal ra, LCDWR
+ jal x0, LOOP
+
+W_40
+ sub a0,a0,a1      #oduzmi konstantu od a0
+ addi a2, x0, 0x58
+ jal ra, LCDWR
+ addi a2, x0, 0x4c
+ jal ra, LCDWR
+ jal x0, LOOP
+
+W_10
+ sub a0,a0,a1      #oduzmi konstantu od a0
+ addi a2, x0, 0x58 
+ jal ra, LCDWR
+ jal x0, LOOP
+
+W_9
+ sub a0,a0,a1      #oduzmi konstantu od a0
+ addi a2, x0, 0x49
+ jal ra, LCDWR
+ addi a2, x0, 0x58
+ jal ra, LCDWR
+ jal x0, LOOP
+
+W_5
+ sub a0,a0,a1      #oduzmi konstantu od a0
+ addi a2, x0, 0x56
+ jal ra, LCDWR
+ jal x0, LOOP
+
+W_4
+ sub a0,a0,a1      #oduzmi konstantu od a0
+ addi a2, x0, 0x49
+ jal ra, LCDWR
+ addi a2, x0, 0x56
+ jal ra, LCDWR
+ jal x0, LOOP
+
+W_1
+ sub a0,a0,a1      #oduzmi konstantu od a0
+ addi a2, x0, 0x49
+ jal ra, LCDWR
+ jal x0, LOOP
+
+
+
+
+#PODATCI
+ org 0x500
+ dw 64
+
+ org 0x600
+GPIO dw 0xFFFF0F00
+ 
+
+ 
+ 

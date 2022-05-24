@@ -1,0 +1,65 @@
+#x5 rezultat funk
+#sp 0x500
+#a1 A
+#a2 B
+#t1 za izračunavanje adrese
+
+ addi sp, x0, 0x500
+ 
+#ucitaj A i B
+ lui t1, %hi(A)
+ addi t1, t1, %lo(A)
+ lw a1, 0(t1)
+ lui t1, %hi(B)
+ addi t1, t1, %lo(B)
+ lw a2, 0(t1)
+ 
+ 
+#spremi A na stog
+ addi sp, sp, -4
+ sw a1, 0(sp)
+#spremi B na stog
+ addi sp, sp, -4
+ sw a2, 0(sp)
+ 
+#pozovi funckiju
+ jal ra, FUNK
+
+#spremi rez
+ lui t1, %hi(REZ)
+ addi t1, t1, %lo(REZ)
+ sw x5, 0(t1)
+
+#skini sa stoga
+ addi sp, sp, 8
+
+ halt
+
+
+FUNK
+ addi sp, sp, -4
+ sw x6, 0(sp)
+ 
+ lw x6, 0x4(sp) #učitaj B
+ lw x5, 0x8(sp) #učitaj A
+
+ slli x5, x5, 7
+ add x5, x5, x6
+
+ lw x6, 0(sp)
+ addi sp, sp, 4
+ jalr x0, 0(ra) 
+
+ org 0x4EF
+ dw 0,0,0,0
+
+ org 0x1000
+A dw 5
+ 
+ org  0x1F00
+REZ dw 0
+
+ org 0xE000
+B dw 6
+ 
+ 

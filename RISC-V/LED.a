@@ -1,0 +1,26 @@
+#s1 adresa gpio-a
+#
+
+#init gpio
+ lw s1, GPIO(x0)
+ addi t0, x0, 0b11100000
+ sw t0, 8(s1) #definiraj ulaz izlaz
+
+LOOP
+ lw t0, 0(s1) #ucitaj sa gpio-a
+ andi t0, t0, 0b00000010
+ blt x0, t0, ON
+ 
+OFF #ugasi lampu
+ addi t0, x0, 0
+ sw t0, 0(s1) 
+ jal x0, LOOP
+
+ON #upali lampu
+ addi t0, x0, 0b00100000
+ sw t0, 0(s1) 
+ jal x0, LOOP
+
+
+
+GPIO dw 0xFFFF0B00

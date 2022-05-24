@@ -1,0 +1,52 @@
+;r0 RTC
+;r1 radni registar
+
+ org 0x0
+ b GLAVNI
+
+ org 0x18
+ B IRQ
+
+
+GLAVNI
+ mov r0, #0b11010010
+ msr cpsr, r0
+ mov sp, #0xFC00
+ 
+ mov r0, #0b11010011
+ msr cpsr, r0
+ mov sp, #0xF800
+ mrs r0, cpsr
+ bic r0, r0, #0b10000000
+ msr cpsr, r0 
+ 
+ ldr r0, RTC
+ mov r1, #0
+ str r1, [r0,#12] ;brisanje lr
+ mov r1, #1
+ str r1, [r0,#16] ;pali CR
+ mov r1, #20   
+ str r1, [r0,#4] ;postavljanje MR-a na 20
+ 
+LOOP
+ b LOOP
+
+
+IRQ
+ stmfd sp!, {r1}
+
+ ldr r1, BRPAK
+ add r1, r1, #1
+ str r1, BRPAK
+ mov r1, #0
+ str r1, [r0,#12]
+ str r1, [r0,#8]
+
+ ldmfd sp!,{r1}
+ subs pc,lr,#4
+
+
+BRPAK dw 0
+
+
+RTC dw 0xFFFF0E00

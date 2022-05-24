@@ -1,0 +1,118 @@
+;RO RTC adresa
+;R2 DMAC adresa
+;R2 radna adresa
+;R3 radna adresa
+
+ ORG 0X0
+ B MAIN
+
+ ORG 0X18
+ B POSLANO
+
+ ORG 0x1C
+ STMFD SP!, {R0,R1,R2}
+ LDR R0, RTC ;dohvati adresu RTC-a
+ LDR R1, DMAC ;dohvati adresu DMAC-a
+;POVECAJ BROJAC
+ LDR R2, BROJAC
+ ADD R2, R2, #1 
+ STR R2, BROJAC
+;DEAKTIVIRAJ RTC
+ MOV R2, #0
+ STR R2, [R0, #0x10] ;cr=0 onemoguciti prekide RTC-u
+;PONOVO DEFINIRAJ DMAC
+ MOV R2, #0x500 ;source
+ STR R2, [R1,#0x10]
+ MOV R2, #0x700 ;destination 
+ STR R2, [R1,#0x14] 
+ MOV R2, #1
+ STR R2, [R1] ;omoguci kanal cr=1
+
+ LDMFD SP!,{R0,R1,R2} ;obnovi kontekst
+ SUBS PC, LR, #4 ;povratak u glavni program
+
+MAIN
+;STOGOVI
+ MSR CPSR, #0b11010010 ;način rada IRQ
+ MOV R13, #0x8000  ;STOG ZA IZNIMKU
+ MSR CPSR, #0b11010001 ;način rada FIQ
+ MOV R13, #0x7C00 ;NORALNI STOG
+ MSR CPSR, #0b11010011 ;način rada SVC
+ MOV R13, #0x7800 ;NORALNI STOG
+
+;INICIJALIZACIJA RTC-A
+ LDR R0, RTC ;dohvati adresu RTC-a
+ LDR R2, KONST ;svakih 3 signala promjena
+ STR R2, [R0, #0x04] ;upiši konstantu brojenja u MR
+ MOV R2, #0
+ STR R2, [R0, #0x10] ;cr=0, nemoj jos omoguciti prekide RTC-u
+
+ MRS R2, CPSR ;dozvoli prekid FIQ
+ BIC R2, R2, #0b01000000 ;brisi 6 bit
+ MSR CPSR, R2
+
+;INICIJALIZACIJA DMAC-A
+ LDR R1, DMAC ; dohvati adresu DMAC-a
+ MOV R2, #0x500 ;source
+ STR R2, [R1,#0x10]
+ MOV R2, #0x700 ;destination 
+ STR R2, [R1,#0x14] 
+ MOV R2, #0x000A ; B=1,(BS=0) T=10
+ STR R2, [R1,#0x18]
+ MOV R2, #0b10101100 ;konfiguracijska rijec
+ STR R2, [R1,#0x1C] 
+ MOV R2, #1
+ STR R2, [R1] ;omoguci kanal cr=1
+
+ MRS R2, CPSR 
+ BIC R2, R2, #0b10000000 ;omoguci IRQ
+ MSR CPSR, R2
+
+
+;GLAVNI PROGRAM
+LOOP
+ LDR R2, BROJAC
+ CMP R2, #5
+ BNE LOOP
+
+ SWI 0x123456
+
+
+POSLANO
+ STMFD SP!, {R1,R2,R3,LR} ;spremi kontekst
+ LDR R1, DMAC
+ MOV R2, #0
+ STR R2, [R1, #0x4] ;dojava prihvata prekida DMAC-u
+ LDR R2, KONST2 ;ucitaj kosnt 80808080
+ LDR R3, [R1, #0x14] ;dohvati odredisnu adresu
+ STR R2,[R3] ;spremi na kraj 80808080
+
+ BL RTC_ON 
+ LDMFD SP!, {R1,R2,R3,LR} ;obnovi kontekst
+ SUBS PC, LR, #4 ;povratak u glavni program
+
+RTC_ON 
+ STMFD SP!, {R0,R2} ;spremi kontekst
+ LDR R0, RTC ;dohvati adresu RTC-a
+ MOV R2, #0
+ STR R2, [R0, #0x0C] ;pobriši brojilo
+ MOV R2, #1
+ STR R2, [R0, #0x08] ; obriši status reg. (šalje se bilo što)
+                     ;JAKO BITNO JER GA RESTARTIRA
+ STR R2, [R0, #0x10] ;dozvoli prekide
+ LDMFD SP!, {R0,R2} ;obnovi kontekst
+ MOV PC,LR
+
+
+ ORG 0x500 
+
+ ORG 0x700
+
+
+;PODATCI
+ ORG 0x1000
+DMAC DW 0x00FF0000
+RTC DW 0xFFFF0E00
+BROJAC DW 0x0
+KONST DW 0x3
+KONST2 DW 0x80808080

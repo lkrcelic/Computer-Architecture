@@ -1,0 +1,47 @@
+ mov sp, #0x1000
+ mov r0, #0x100
+ ldr r0, [r0]
+
+PRIKAZ
+ mov r1, #0x0D
+ bl LCDWR
+ 
+ mov r1, #0x41 ; slanje znaka ‘A'
+ bl LCDWR
+ mov r1, #0x52 ; slanje znaka ‘R'
+ bl LCDWR
+ mov r1, #0x4D ; slanje znaka ‘M'
+ bl LCDWR
+ mov r1, #0x0A ;slanje LF-a
+ bl LCDWR
+ 
+ swi 0x123456
+
+ org 0x100
+ dw 0xFFFF0F00 ; adresa GPIO-a
+
+
+LCDWR
+ stmfd sp!, {r1}
+ 
+ and r1, r1, #0x7F ;postavljanje 7 bita u 0
+ strb r1, [r0,#4]
+
+ orr r1, r1, #0x80 ;sada postavimo bit 7 u jeadn
+ strb r1, [r0,#4]
+
+ and r1, r1, #0x7F ;postavljanje 7 bita u 0
+ strb r1, [r0,#4]
+
+ ldmfd sp!, {r1}
+ mov pc, lr
+ 
+ 
+ 
+
+
+
+ 
+ 
+
+

@@ -1,0 +1,70 @@
+ ORG 0
+MAIN MOV SP, #0x10000   ; stog
+ MOV R5, #TEMP           ; blok za spremanje temperatura
+ MOV R2, #20             ; brojac ocitanja za petlju
+INIT LDR R1, GPIO       ; R1 = GPIO bazna adresa
+ MOV R0, #0b10000000     ; smjer vrata A, bit 7 je
+ STR R0, [R1, #0x8]      ; izlazni, ostali su ulazni
+
+LOOP                    ; citaj sa vrata A, ispiši na LCD i spremaj temperaturu 20 puta
+CEKAJ                   ; cekaj spremnost temperaturnog uredaja na bitu 6
+ LDR R0, [R1, #0]
+ ANDS R0, R0, #0b01000000
+ BEQ CEKAJ
+CITAJ LDR R0, [R1, #0]  ; citaj temperaturu
+ AND R0, R0, #0b00111111 ; izdvoji samo bitove 0-5
+SPREMI STRB R0, [R5], #1 ; spremi temperaturu u blok
+ BL LCD                  ; ispis temperature na LCD
+
+IMPULS                  ; kratki impuls na bitu 7 – potvrda da je podatak pročitan
+ ORR R0, R0, #0b10000000 ; digni bit 7 u jedan
+ STR R0, [R1, #0]
+ BIC R0, R0, #0b10000000 ; vrati bit 7 u nulu
+ STR R0, [R1, #0]
+ SUBS R2, R2, #1         ; smanji brojac i vrti petlju
+ BNE LOOP
+
+KRAJ SWI 0x123456
+
+
+LCD STMFD R13!, {LR}
+ MOV R3,R0               ; prebaci u dvije dekadske znameke
+ BL DIV10 
+               ; dijeljenje s 10 ulaz u R3, rez u R4, ostatak u R3
+ MOV R0, #0x0D           ; slanje znaka 0xD => briše se ulazni registar
+ BL LCDWR
+
+ ADD R0,R4,#48
+ BL LCDWR                ; pošalji znamenku desetice
+ ADD R0,R3,#48
+ BL LCDWR                ; pošalji znamenku jedinice
+
+ MOV R0, #0x0A           ; slanje znaka 0xA => ispis znakova na zaslon
+ BL LCDWR
+
+ LDMFD R13!, {LR}
+ MOV PC,LR
+
+DIV10 MOV R4,#0         ; dijeljenje s 10 ulaz u R3, rez u R4, ostatak u R3
+L1 CMP R3, #10
+ MOVLO PC, LR
+ SUB R3, R3, #10
+ ADD R4,R4,#1
+ B L1
+
+LCDWR STMFD R13!, {R0}  ; slanje znaka na LCD
+ AND R0, R0, #0x7F       ; postavi bit 7 u nulu (za svaki slucaj, jer
+                        ; u R0 je tu mogla biti 1) i pošalji znak
+ STRB R0, [R1,#4]
+ ORR R0, R0, #0x80       ; postavi bit 7 u jedan (podigni impuls)
+ STRB R0, [R1,#4]
+ AND R0, R0, #0x7F       ; postavi bit 7 u nulu (spusti impuls)
+ STRB R0, [R1,#4]
+ LDMFD R13!, {R0}
+ MOV PC, LR              ; povratak
+
+
+GPIO DW 0xFFFF0F00      ; adresa GPIO-a
+
+ ORG 0x300
+TEMP DS 20              ; blok za pohranu 20 temperatura

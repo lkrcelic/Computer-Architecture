@@ -1,0 +1,91 @@
+;RO rtc adresa
+;R2 gpio adresa
+;R2 radna adresa
+
+
+ ORG 0X0
+ B MAIN
+
+ ORG 0X18
+ B CHANGE  ;PROMJENI SEMAFOR
+
+MAIN
+;STOGOVI
+ MSR CPSR, #0b11010010 ;način rada IRQ
+ MOV R13, #0x8000  ;STOG ZA IZNIMKU
+ MSR CPSR, #0b11010011 ;način rada SVC
+ MOV R13, #0x7C00 ;NORALNI STOG
+
+;INICIJALIZACIJA RTC-A
+ LDR R0, RTC ;dohvati adresu RTC-a
+
+ MOV R2, #0
+ STR R2, [R0, #0x0C] ;pobriši brojilo
+ LDR R2, KONST ;svakih 5 signala promjena
+ STR R2, [R0, #0x04] ;upiši konstantu brojenja u MR
+
+ MOV R2, #1
+ STR R2, [R0, #0x10] ;cr=1, omoguci prekide RTC-u
+
+ MRS R2, CPSR ;dozvoli prekid IRQ
+ BIC R2, R2, #0b10000000 ;brisi 7 bit
+ MSR CPSR, R2
+
+;INICIJALIZACIJA GPIO-A
+ LDR R1, GPIO ; dohvati adresu GPIO-a
+ MOV R2, #0b11100000 ; sve na ulaz osim ledica
+ STR R2, [R1, #8] ;pošalji smjer u PA_DDR
+ MOV R2, #0b00100000 ;pocetno stanje semafora, crveno
+ STR R2, [R1] ;podesi početno stanje
+
+
+LOOP
+ LDR R2, BROJAC
+ CMP R2, #16 
+ BNE LOOP
+
+ SWI 0x123456
+
+
+CHANGE
+ STMFD SP!, {R0-R4} ; spremi kontekst
+ ;INICIJALIZIRAJ SLJEDEĆI CIKLUS BROJENJA
+ LDR R0, RTC 
+ MOV R2, #0 
+ STR R2, [R0, #0x0C] ; pobriši brojilo (MR ostaje 5)
+ STR R2, [R0, #0x08] ; obriši status reg. (šalje se bilo što)
+
+ ;DOHVATI I UVECAJ BROJAC
+ LDR R2, BROJAC 
+ ADD R2, R2, #1  
+ STR R2, BROJAC
+ 
+ ;PROMJENI SVIJETL0
+ LDR R1, GPIO 
+ LDR R3, [R1] ;ucitaj trenutno stanje
+
+ MOV R2, #0b00100000 ;stanje 1
+ CMP R3,R2
+ MOVEQ R4,#0b01100000 ;u R3 stavi sljedece stanje
+ MOV R2, #0b01100000 ;stanje 2
+ CMP R3,R2
+ MOVEQ R4,#0b10000000 ;u R3 stavi sljedece stanje
+ MOV R2, #0b10000000 ;stanje 3
+ CMP R3,R2
+ MOVEQ R4,#0b01000000 ;u R3 stavi sljedece stanje
+ MOV R2, #0b01000000 ;stanje 4
+ CMP R3,R2
+ MOVEQ R4,#0b00100000 ;u R3 stavi sljedece stanje
+
+ STR R4, [R1]
+
+;VAN
+ LDMFD SP!, {R0-R4} ; obnovi kontekst
+ SUBS PC, LR, #4 ; povratak u glavni program
+
+
+;PODATCI
+GPIO DW 0xFFFF0B00
+RTC DW 0xFFFF0E00
+BROJAC DW 0x0
+KONST DW 0x5

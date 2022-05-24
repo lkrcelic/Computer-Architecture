@@ -1,0 +1,63 @@
+ ORG 0
+ B MAIN ; skok na obradu iznimke RESET
+
+ ORG 0x18
+ B DMA_KRAJ ; skok na obradu iznimke IRQ
+
+
+MAIN ; Inicijalizacija stogova
+ MSR CPSR, #0b11010010 ; prelazak u način rada IRQ
+ MOV R13, #0x10000 ; inicijalizacija R13_irq
+ MSR CPSR, #0b11010011 ; prelazak u način rada SVC
+ MOV R13, #0xFC00 ; inicijalizacija R13_svc
+
+INIT ; inicijalizacija DMAC-a
+ MOV R1, #0x00FF0000 ; adresa ima oblik rotiranog bajta
+ MOV R0, #0x1000
+ STR R0, [R1,#0x10] ; Source address
+ MOV R0, #0x2000
+ STR R0, [R1,#0x14] ; Destination address
+ MOV R0, #0x000C ; Sizes: burst size = 1 = 2^0
+ STR R0, [R1,#0x18] ; transfer size = 0x040
+ MOV R0, #0b10101100
+ STR R0, [R1,#0x1C] ; Configuration
+
+; omogući prekid IRQ
+ MRS R0, CPSR
+ BIC R0, R0, #0x80
+ MSR CPSR, R0
+
+; omogući kanal, tj. pokretanje DMA
+ MOV R0, #1
+ STR R0, [R1,#0] ; Control
+
+
+NASTAVAK ; neki glavni program….
+ CMP R7, #1 ; provjera da li je DMA gotov
+ BNE NASTAVAK
+
+ SWI 123456
+
+
+; posluživanje prekida IRQ
+DMA_KRAJ 
+ STMFD SP!, {R1, LR} ; spremi kontekst
+ MOV R1, #0x00FF0000 ; brisanje statusa, tj. dojava
+ STR R1, [R1, #0x4] ; prihvata prekida DMAC-u
+ BL GOTOVO ; nakon DMA-prijenosa => GOTOVO
+
+ LDMFD SP!, {R1, LR} ; obnovi kontekst
+ SUBS PC, LR, #4 ; povratak iz iznimke/prekida
+
+
+GOTOVO MOV R7, #1
+ MOV PC,LR
+
+
+DMAC_A DW 0x00FF0000 ; adresa DMAC-a
+
+ org 0x1000
+ dw 1,2,3,4,5,6,7,8,9,10,11,12
+ 
+ org 0x2000
+ ds 48

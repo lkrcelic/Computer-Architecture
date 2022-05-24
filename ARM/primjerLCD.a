@@ -1,0 +1,37 @@
+ ORG 0
+MAIN MOV SP, #0x10000   ; stog
+ MOV R1, #0x100         ; R1=100 jer je tu zapisana adresa GPIO-a
+ LDR R1, [R1]           ; u R1 se učitava bazna adresa GPIO-a
+ ADD R1,R1,#4           ; u R1 je adresa PB DR (jer ju koristi LCDWR)
+
+PRIKAZ
+ MOV R0, #0x0D          ; slanje znaka 0xD => briše se ulazni registar
+ BL LCDWR
+ MOV R0, #0x41          ; slanje znaka ‘A'
+ BL LCDWR
+ MOV R0, #0x52          ; slanje znaka ‘R'
+ BL LCDWR
+ MOV R0, #0x4D          ; slanje znaka ‘M'
+ BL LCDWR
+ MOV R0, #0x0A          ; slanje znaka 0xA => ispis znakova na zaslon
+ BL LCDWR
+
+ SWI 0x123456
+
+
+ ORG 0x100
+ DW 0xFFFF0F00          ; adresa GPIO-a
+
+LCDWR STMFD R13!, {R0}
+ AND R0, R0, #0x7F      ; postavi bit 7 u nulu (za svaki slučaj, jer
+                        ; u R0 je tu mogla biti 1) i pošalji znak
+ STRB R0, [R1]
+
+ ORR R0, R0, #0x80      ; postavi bit 7 u jedan (podigni impuls)
+ STRB R0, [R1]
+
+ AND R0, R0, #0x7F      ; postavi bit 7 u nulu (spusti impuls)
+ STRB R0, [R1]
+
+ LDMFD R13!, {R0}
+ MOV PC, LR             ; povratak

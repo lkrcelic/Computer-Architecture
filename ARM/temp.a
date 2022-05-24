@@ -1,0 +1,76 @@
+ mov sp,#0x1000
+ ldr r0, GPIO
+ mov r1, #TEMP ;adresa rezultata
+ ldr r2, KONST ;brojac
+ mov r3, #0b10000000 ; smjer vrata A, bit 7 je
+ str r3, [r0, #0x8] ; izlazni, ostali su ulazni
+
+;r3 radni registar
+PETlJA
+ cmp r2, #20
+ beq KRAJ
+ add r2, r2, #1 
+ 
+ mov r3, #0x0D
+ bl ISPIS 
+
+LOOP
+ ldr r3, [r0, #0]
+ tst r3, #0b01000000
+ beq LOOP
+ 
+ and r3, r3, #0b00111111
+ strb r3, [r1,r2]
+ 
+ bl MOD10 ;vraća rez preko r3 i r4, r3 manje tezine
+ 
+ add r3, r3, #48
+ bl ISPIS
+
+ mov r3, r4
+ add r3, r3, #48
+ bl ISPIS
+
+ mov r3, #0x0A
+ bl ISPIS
+
+IMPULS ; kratki impuls na bitu 7 – potvrda da je podatak pročitan
+ orr r3, r3, #0b10000000 ; digni bit 7 u jedan
+ str r3, [r0, #0]
+ bic r3, r3, #0b10000000 ; vrati bit 7 u nulu 
+ str r3, [r0, #0]
+ 
+ b PETLJA
+
+KRAJ
+ swi 0x123456
+
+ISPIS
+ and r3, r3, #0x7F
+ strb r3, [r0,#4]
+ orr r3, r3, #0x80
+ strb r3, [r0,#4]
+ and r3, r3, #0x7F
+ strb r3, [r0,#4]
+ mov pc, lr
+
+MOD10
+ stmfd sp!, {r0-r2}
+ mov r4, r3
+ mov r3, #0
+ 
+ODUZMI
+ cmp r4, #10
+ blo VAN
+ sub r4, r4, #10
+ add r3, r3, #1
+ b ODUZMI
+ 
+VAN
+ ldmfd sp!, {r0-r2}
+ mov pc, lr
+
+GPIO dw 0xFFFF0F00
+KONST dw 0
+TEMP
+ ds 20

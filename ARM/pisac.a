@@ -1,0 +1,51 @@
+ mov sp, #0x1000 ;inicijalizacija stoga
+
+ ldr r0, GPIO ;dohvat gpio-a
+ mov r1, #0x7F ;svi biotvi ulazni osim 7 izlazni
+ str r1, [r0,#8] ;storamo u PA_DDR
+ 
+ mov r1, #0b11111110 ;svi bitovi osim bita send (nulti) ulazni
+ str r1, [r0,#0xC] ;storamo u Pb_DDR
+
+ mov r1, #STR ;pointer na pocetak stringa
+ bl PRINT 
+
+ swi 0x123456
+
+;r0 gpio
+;r1 pokazivac na string
+;r2 char
+;r3 radni registar 
+PRINT
+ stmfd sp!, {r0-r3} ;spremanje konteksta
+
+;program treba citati znak po znak sa lokacije STR, i onda ispisivati te 
+;znakove. Kod ispisa moramo čekati spremnost printera a to radimo provjerom
+;bita 1 na B portu, tj. cekamo da bit BUSY bude 0. Kad je busy 0 onda je 
+;printer spreman ta ispis, i onda mu šaljemo znak na PA i nakon toga 
+;postavljamo SEND u 1 i odmah nakon postavljamo send u 0;
+;To sve radimo dok ne dodemo do kraja stringa 
+LOOP 
+ ldrb r2, [r0], #1
+ cmp r2, #0
+ beq OUT
+ 
+WAIT
+ ldr r3, [r1,#4]
+ tst r3, #0b00000010 ;testiranje da li je busy u 1 ako je cekamo da dode 0
+ bne WAIT
+ 
+ str r2, [r0,#0] ;slanje znaka na port A na pisac
+ mov r3, #1 
+ str r3, [r0,#4] ;šaljemo da je send spreman
+ mov r3, #0 
+ str r3, [r0,#4] ;gasimo send
+
+ b LOOP
+
+OUT
+ ldmfd sp!, {r0-r3}
+ mov pc, lr
+
+GPIO dw FFFF0100
+STR dstr "ARM"

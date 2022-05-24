@@ -1,0 +1,33 @@
+MAIN MOV SP, #0x10000 ; inicijalizacija stoga
+ MOV R0, #STRING1 ; pripremi argumente
+ STR R0, ST
+ MOV R0, #0x61 ; ASCII-kôd slova ‘a’
+ STR R0, CH
+ BL STRCHR ; poziv funkcije
+ LDR R0, REZ ; dohvat i upotreba rezultata
+ CMP R0, #0 ; je li vraćen NULL pokazivač?
+ BEQ KRAJ ; ako ‘a’ nije pronađen => gotovo
+A_U_B MOV R1, #0x62 ; ascii-kod slova ‘b’
+ STRB R1, [R0] ; zamijeni ‘a’ sa ‘b’
+KRAJ SWI 0x123456
+
+STRING1 DSTR "fgafasdf" ; upis stringa u memoriju
+ST DW 0 ; prvi parametar – pokazivač na string
+CH DB 0 ; drugi parametar – znak koji tražimo
+REZ DW 0 ; rezultat – pokazivač na pronađeni znak
+
+STRCHR STMFD SP!, {R0-R2} ; spremi kontekst
+ LDR R0, ST ; dohvat parametara iz fiksnih lokacija ST i CH
+ LDRB R1, CH
+
+LOOP LDRB R2, [R0] ; čitaj znak po znak iz stringa
+ CMP R2, #0 ; provjeri kraj stringa ‘\0’
+NEMA MOVEQ R0, #0 ; došli smo do kraja - znak nije pronađen
+ BEQ VAN ; zapamti NULL kao rezultat i prekini petlju
+ CMP R2, R1 ; usporedi trenutni znak sa zadanim
+ISTI BEQ VAN ; isti su – R0 je adresa pronađenog znaka
+DALJE ADD R0, R0, #1 ; nisu isti – traži dalje
+ B LOOP
+VAN STR R0, REZ ; spremi rezultat u fiksnu lokaciju REZ
+ LDMFD SP!, {R0-R2} ; obnova konteksta i povratak
+ MOV PC, LR

@@ -1,0 +1,78 @@
+ org 0x0
+ b MAIN
+
+ org 0x1C
+ ;provjera da li je temp spreman
+ ldr r8, GPIO1
+ ldr r9, [r8,#0]
+ tst r9, #0b01000000
+ beq NISTA
+ 
+;ako je spreman ucitaj temp i pomjeni led
+  ;ucitaj temp
+ and r9, r9, #0b00111111
+ 
+ ;promjeni led
+ cmp r9, #20
+ movlo r9, #0b10000000
+ blo SKOK
+ cmp r9, #24
+ movlo r9, #0b01000000
+ blo SKOK
+ mov r9, #0b00100000
+ 
+SKOK
+ ldr r10, GPIO2
+ str r9, [r10,#0]
+
+ ;dojavi da si procitao temp
+ orr r9, r9, #0x80
+ str r9, [r8,#0]
+ and r9, r9, #0x7F
+ str r9, [r8,#0]
+
+;restartiraj rtc
+NISTA
+ ldr r8, RTC
+ mov r9, #0
+ str r9, [r8,#12] ;LR
+ str r9, [r8,#8] ;STAT
+ 
+
+ subs pc, lr, #4
+ 
+
+;r0 RTC
+;r1 GPIO1
+;r2 GPIO2
+MAIN
+;dozvoli fiq prekide
+ mrs r0, cpsr
+ bic r0, r0, #0b01000000
+ msr cpsr, r0
+;inicijalizacija rtc-a
+ ldr r0, RTC
+ mov r1, #40
+ str r1, [r0,#0x4] ;MR
+ mov r1, #0
+ str r1, [r0,#12] ;LR
+ mov r1, #1
+ str r1, [r0,#16] ;CR
+
+;inicijalizacija temp (GPIO1)
+ ldr r1, GPIO1
+ mov r2, #0x80 ;samo ack izlaz
+ str r2, [r1,#8] ;PA_DDR 
+ 
+;inicijalizacija ledica (GPIO2)
+ ldr r2, GPIO2
+ mov r3, #0b11100000 ;tri ledice izlaz
+ str r3, [r2,#8] ;PA_DDR 
+
+LOOP
+ b LOOP
+
+
+RTC dw 0xFFFF0E00
+GPIO1 dw 0xFFFF0F00
+GPIO2 dw 0xFFFF0B00

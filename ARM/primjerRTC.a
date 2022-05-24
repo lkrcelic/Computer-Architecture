@@ -1,0 +1,25 @@
+ ORG 0
+INIT LDR R0, RTC        ; dohvati adresu RTC-a
+ MOV R1, #0
+ STR R1, [R0, #0x0C]    ; pobrisati brojilo preko LR
+ MOV R2, #20            ; broj vijaka u jednom paketu
+ STR R2, [R0, #0x04]    ; upisati konstantu brojenja u MR
+ STR R1, [R0, #0x10]    ; zabraniti prekid RTC-u u CR (nije nužno)
+
+GLAVNI                  ; glavni program samo prebraja pakete
+
+CEKAJ LDR R1, [R0, #0x08] ; dohvatiti status RTC-a
+ TST R1, #1             ; ispitati najniži bit
+ BEQ CEKAJ              ; dok je status==0 => čekaj spremnost
+PAKET                   ; spreman => odbrojeno je 20 impulsa
+ MOV R1, #0             ; inicijaliziraj sljedeći ciklus brojenja
+ STR R1, [R0, #0x0C]    ; pobrisati brojilo (MR ostaje 20)
+ STR R1, [R0, #0x08]    ; obrisati status (šalje se bilo što)
+ LDR R1, BRPAK          ; povećati brojač paketa BRPAK
+ ADD R1, R1, #1
+ STR R1, BRPAK
+ B CEKAJ                ; beskonačno prebrajaj pakete
+
+
+RTC DW 0xFFFF0E00       ; adresa RTC-a
+BRPAK DW 0              ; brojač proizvedenih paketa

@@ -1,0 +1,70 @@
+ mov sp, #0x5000
+ ldr r0, GPIO ;adresa GPIO-a
+ ldr r4, GPIO2 ;adresa GPIO2-a
+ mov r1, #0 ;brojac
+ 
+ mov r2, #0b10000000
+ str r2, [r0,#0x8] ;defiiraj ulaz izlaz, svi ulazni osim ACK
+ mov r2, #0b11100000 ;samo tri diode izlazne
+ str r2, [r4, #0x8]
+
+ mov r2, #0b00100000
+ str r2, [r4, #0x0] ;postavi na crveno na pocetku
+
+;RAD PROGRAMA
+;ucitava sa gpio PA i gleda kada je 6 bit (RDY) u jedinici
+;kad je u jedinici ucitavamo temp i uzimamo samo prvih 6 bitova koje spremamo
+;na adresu 1000 koju vecavamo pomocu brojaca, nakon toga stavimo ack u jedan ša 
+;u nulu kao znak da može početi novo mjerenje
+;pazi na ucitavanje i spremanje bajtova
+
+;r2 radni reg
+PROG
+ cmp r1, #200
+ beq KRAJ
+
+ ldr r2, [r0,#0]
+ tst r2, #0b01000000
+ blne SPREMI
+ 
+ ldr r2, [r4, #0x0]
+ tst r2, #0b00100000
+ movne r2, #0b10000000
+ bne SKOK
+ tst r2, #0b10000000
+ movne r2, #0b00100000
+SKOK
+ str r2, [r4, #0x0]
+
+ b PROG 
+
+
+KRAJ
+ swi 0x123456
+
+
+SPREMI
+ stmfd sp!, {r2-r3}
+ 
+ mov r3, #0b11111
+ and r2, r2, r3
+ mov r3, #REZ
+ strb r2, [r3,r1] 
+
+IMPULS
+ orr r2, r2, #0x80
+ str r2, [r0,#0]
+ and r2, r2, #0x7F
+ str r2, [r0,#0]
+        
+ add r1, r1, #1
+ ldmfd sp!, {r2-r3}
+ mov pc, lr
+
+GPIO dw 0xFFFF0F00
+GPIO2 dw 0xFFFF0B00
+
+
+ org 0x1000
+REZ
+ ds 200

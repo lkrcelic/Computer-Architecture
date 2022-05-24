@@ -1,0 +1,54 @@
+ mov sp, #0x1000 ;inicijalizacija stoga
+
+ mov r0, #STRING ; spremi string u r0
+ str r0, ST ;stringiz r0 spremi u labelu ST
+
+ mov r0, #0x61 ;ascii kod slova a
+ str r0, CH ;spremi slovo koje tražio u CH
+ 
+ BL STRCHR
+
+ ldr r0, REZ
+ cmp r0, #0
+ beq KRAJ; ako je na adresi r0 0 onda nismo našli znak
+
+ mov r1, #0x62
+ strb r1, [r0]
+
+KRAJ
+ swi 0x123456 
+
+
+STRCHR
+ stmfd SP!, {r0-r2} ;spremi kontekst, fd=decrement before
+ ldr r0,ST ;dohvat pointera na string
+ ldrb r1, CH ;dohvat znaka koj tražimo
+
+LOOP
+ ldrb r2, [r0] ;čitaj znak iz r0 i spremaj ga u r2
+ cmp r2, #0 ;provjeri da li je kraj stringa
+ 
+ moveq r0, #0 ;ako smo došli do kraja znak očito nije pronađen
+              ;znaci u r0 spremamo 0
+ beq VAN
+
+ cmp r2, r1
+ beq VAN ;ako su isti van, na adresi r0 je naš traženi znak
+ 
+ add r0, r0, #1 ;nisu isti i nije kraj pomakni se za jedan
+ b LOOP
+
+VAN
+ str r0, REZ
+ 
+ ldmfd sp!, {r0-r2}
+ mov pc, lr
+
+
+
+STRING dstr "fgafasdf" ;definiranje stringa
+
+ST dw 0 ;pokazivač na string
+CH db 0 ;znak koji tražimo
+REZ dw 0 ;pokazivač na pronađeni znak
+ 

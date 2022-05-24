@@ -1,0 +1,33 @@
+ mov sp, #0x1000 
+
+ bl PODJELI
+PRVI dw 7
+DRUGI dw 2
+
+ swi 0x123456
+
+
+
+PODJELI
+ stmfd sp!, {r2}
+ ldr r1, [lr],#4 ;prvi a ujedno i ostatak
+ ldr r2, [lr],#4
+ mov r0, #0 ;postavljanje 0 u r0
+ 
+LOOP
+ cmp r1, r2
+ blo VAN ;ako je r2 manji od r3 gotovi smo
+ 
+ sub r1,r1,r2
+ add r0, r0,#1
+ b LOOP
+
+VAN
+ ldmfd sp!, {r2}
+ mov pc, lr
+
+
+ 
+  
+
+
